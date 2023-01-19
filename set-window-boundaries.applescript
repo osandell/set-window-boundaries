@@ -27,6 +27,17 @@ on getWorkAreaSizes()
 	return output
 end getWorkAreaSizes
 
+on getYOffsets()
+	set output to {}
+	repeat with curScreen in current application's NSScreen's screens()
+		# We use visibleFrame() instead of frame() in order to account for the dock and menu bar
+		set theFrame to curScreen's visibleFrame()
+		set _size to item 2 of theFrame
+		copy _size to the end of the output
+	end repeat
+	return output
+end getWorkAreaSizes
+
 on getDockHeight()
 	set primaryScreen to item 1 of current application's NSScreen's screens()
 	set theFrame to primaryScreen's visibleFrame()
@@ -60,6 +71,15 @@ on setWindowBoundaries(appName, targetScreen, shouldHaveSpaceAround, xRatio, yRa
 		-- For some reason we don't get the correct work area height for the
 		-- secondary screen. We need to manually subtract the menu bar height.
 		set secondaryWorkAreaHeight to item 2 of item 2 of workAreaSizes - menuBarHeight 
+	end if
+
+	if screensCount is 3 then
+		set secondaryScreenHeight to item 2 of item 3 of screenSizes
+		set secondaryWorkAreaWidth to item 1 of item 3 of workAreaSizes
+
+		-- For some reason we don't get the correct work area height for the
+		-- secondary screen. We need to manually subtract the menu bar height.
+		set secondaryWorkAreaHeight to item 2 of item 3 of workAreaSizes - menuBarHeight 
 	end if
 
 	if (appName is "frontmost")
@@ -115,8 +135,27 @@ on setWindowBoundaries(appName, targetScreen, shouldHaveSpaceAround, xRatio, yRa
 		
 		set xPos to (secondaryWorkAreaWidth - appWidth) / 2 + xOffset
 		set yPos to (secondaryWorkAreaHeight - appHeight) / 2 + menuBarHeight + yOffset
-	else
-	if (shouldHaveSpaceAround is "true" or (shouldHaveSpaceAround is "auto" and screensCount is 2)) then
+
+		-- display dialog "" & yPos
+		-- set yPos to -250
+	else if (targetScreen is "secondary" and screensCount is 3) then
+		set appWidth to secondaryWorkAreaWidth * xRatio
+
+		-- This script assumes that the third screen is in vertical orientation.
+		-- Below calculation makes sure that the app fills the rest of the
+		-- screen below the y position.
+		set screenThree to item 3 of current application's NSScreen's screens()
+		set screenThreeYOffset to item 2 of item 1 of screenThree's visibleFrame()
+		set appHeight to 1440 - screenThreeYOffset
+
+		set xOffset to primaryWorkAreaWidth + secondaryWorkAreaWidth * xOffsetRatio	
+		set xPos to (secondaryWorkAreaWidth - appWidth) / 2 + xOffset
+
+		-- By setting the y pos to 0 the app on the vertical screen will be
+		-- aligned with the top of the horizontal screen.
+		set yPos to 0
+	else 
+	    if (shouldHaveSpaceAround is "true" or (shouldHaveSpaceAround is "auto" and screensCount is 2) or (shouldHaveSpaceAround is "auto" and screensCount is 3)) then
 			set appWidth to primaryWorkAreaWidth * xRatio * SPACE_AROUND_X_RATIO
 			set appHeight to primaryWorkAreaHeight * yRatio * SPACE_AROUND_Y_RATIO
 			set xOffset to primaryWorkAreaWidth * SPACE_AROUND_X_RATIO * xOffsetRatio
